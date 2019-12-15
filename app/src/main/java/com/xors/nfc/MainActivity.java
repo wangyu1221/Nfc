@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.text.InputType;
 import android.util.Log;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -19,6 +20,7 @@ import static android.content.ContentValues.TAG;
 public class MainActivity extends Activity {
 
     private EditText editTextl;
+    private TextView textView;
     private NfcUtils nfcUtils;
 
     @Override
@@ -28,6 +30,7 @@ public class MainActivity extends Activity {
         NfcUtils.NfcCheck(this);
         NfcUtils.NfcInit(this);
         editTextl = findViewById(R.id.editText);
+        textView = findViewById(R.id.textView);
         nfcUtils = new NfcUtils(this);
     }
 
