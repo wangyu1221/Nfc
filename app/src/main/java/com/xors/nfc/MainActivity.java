@@ -4,16 +4,16 @@ import android.app.Activity;
 import android.content.Intent;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
-import android.nfc.tech.IsoDep;
 import android.nfc.tech.MifareClassic;
+import android.nfc.tech.NfcA;
+import android.nfc.tech.NfcV;
 import android.os.Bundle;
-import android.text.InputType;
 import android.util.Log;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.List;
 
 import static android.content.ContentValues.TAG;
 
@@ -57,84 +57,19 @@ public class MainActivity extends Activity {
     private void processIntent(Intent intent) {
         //取出封装在intent中的TAG
         Tag tagFromIntent = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
-        String CardId = byteArrayToHexString(tagFromIntent.getId());
-        String metaInfo = "";
-        metaInfo += "卡片ID:\t" + CardId;
         for (String tech : tagFromIntent.getTechList()) {
             System.out.println(tech);
         }
-        boolean auth = false;
         //读取TAG
-        MifareClassic mfc = MifareClassic.get(tagFromIntent);
-//        MifareClassic mfc = MifareClassic.get(tagFromIntent);
-        try {
-            //Enable I/O operations to the tag from this TagTechnology object.
-            mfc.connect();
-            int type = mfc.getType();//获取TAG的类型
-            int sectorCount = mfc.getSectorCount();//获取TAG中包含的扇区数
-            String typeS = "";
-            switch (type) {
-                case MifareClassic.TYPE_CLASSIC:
-                    typeS = "TYPE_CLASSIC";
-                    break;
-                case MifareClassic.TYPE_PLUS:
-                    typeS = "TYPE_PLUS";
-                    break;
-                case MifareClassic.TYPE_PRO:
-                    typeS = "TYPE_PRO";
-                    break;
-                case MifareClassic.TYPE_UNKNOWN:
-                    typeS = "TYPE_UNKNOWN";
-                    break;
-            }
-            metaInfo += "\n卡片类型：\t" + typeS + "\n共" + sectorCount + "个扇区\n共" + mfc.getBlockCount() + "个块\n存储空间: " + mfc.getSize() + "B\n";
-            metaInfo += "\n卡片类型：\t" + intent.getAction() + "\n";
-            metaInfo += "\n卡片类型：\t" + Arrays.toString(tagFromIntent.getTechList()) + "\n";
-            for (int j = 0; j < sectorCount; j++) {
-                //Authenticate a sector with key A.
-                String keyA = null;
-                auth = mfc.authenticateSectorWithKeyA(j, MifareClassic.KEY_DEFAULT);
-                keyA = "KEY_DEFAULT";
-                if (!auth){
-                    auth = mfc.authenticateSectorWithKeyA(j, MifareClassic.KEY_MIFARE_APPLICATION_DIRECTORY);
-                    keyA = "KEY_MIFARE_APPLICATION_DIRECTORY";
-                }
-                if (!auth){
-                    auth = mfc.authenticateSectorWithKeyA(j, MifareClassic.KEY_NFC_FORUM);
-                    keyA = "KEY_NFC_FORUM";
-                }
-//                if (!auth){
-//                    auth = mfc.authenticateSectorWithKeyB(j, MifareClassic.KEY_DEFAULT);
-//                }
-//                if (!auth){
-//                    auth = mfc.authenticateSectorWithKeyB(j, MifareClassic.KEY_MIFARE_APPLICATION_DIRECTORY);
-//                }
-//                if (!auth){
-//                    auth = mfc.authenticateSectorWithKeyB(j, MifareClassic.KEY_NFC_FORUM);
-//                }
-
-
-                int bCount;
-                int bIndex;
-                if (auth) {
-                    metaInfo += "Sector " + j + ":验证成功, key=" + keyA + "\n";
-                    // 读取扇区中的块
-                    bCount = mfc.getBlockCountInSector(j);
-                    bIndex = mfc.sectorToBlock(j);
-                    for (int i = 0; i < bCount; i++) {
-                        byte[] data = mfc.readBlock(bIndex);
-                        metaInfo += "Block " + bIndex + " : " + bytesToHexString(data) + "\n";
-                        bIndex++;
-                    }
-                } else {
-                    metaInfo += "Sector " + j + ":验证失败\n";
-                }
-            }
+        List<String> techList = Arrays.asList(tagFromIntent.getTechList());
+        if (techList.contains(MifareClassic.class.getCanonicalName())){
+            String metaInfo = NfcReader.readMifareClassic(tagFromIntent);
             editTextl.setText(metaInfo);
-//            editTextl.setInputType(InputType.TYPE_NULL);
-        } catch (Exception e) {
-            e.printStackTrace();
+        }else if (techList.contains(NfcV.class.getCanonicalName())){
+            String metaInfo = NfcReader.readNfcv(tagFromIntent);
+            editTextl.setText(metaInfo);
         }
+//        MifareClassic mfc = MifareClassic.get(tagFromIntent);
     }
 
     @Override
@@ -152,34 +87,5 @@ public class MainActivity extends Activity {
     }
 
 
-    private String bytesToHexString(byte[] src) {
-        StringBuilder stringBuilder = new StringBuilder("0x");
-        if (src == null || src.length <= 0) {
-            return null;
-        }
-        char[] buffer = new char[2];
-        for (int i = 0; i < src.length; i++) {
-            buffer[0] = Character.forDigit((src[i] >>> 4) & 0x0F, 16);
-            buffer[1] = Character.forDigit(src[i] & 0x0F, 16);
-            System.out.println(buffer);
-            stringBuilder.append(buffer).append(" ");
-        }
-        return stringBuilder.toString();
-    }
 
-    private String byteArrayToHexString(byte[] inarray) {
-        int i, j, in;
-        String[] hex = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A",
-                "B", "C", "D", "E", "F"};
-        String out = "";
-        for (j = 0; j < inarray.length; ++j) {
-            in = (int) inarray[j] & 0xff;
-            i = (in >> 4) & 0x0f;
-            out += hex[i];
-            i = in & 0x0f;
-            out += hex[i];
-            out += " ";
-        }
-        return out;
-    }
 }
